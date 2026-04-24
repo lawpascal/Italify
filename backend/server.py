@@ -537,6 +537,24 @@ async def startup():
 async def shutdown():
     client.close()
 
+class ChangePasswordIn(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=6)
+ 
+@api.post("/auth/change-password")
+async def change_password(payload: ChangePasswordIn, user: dict = Depends(get_current_user)):
+    if not verify_password(payload.old_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Password attuale non corretta")
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"password_hash": hash_password(payload.new_password)}}
+    )
+    return {"ok": True}
+ 
+@api.delete("/auth/delete-account")
+async def delete_account(user: dict = Depends(get_current_user)):
+    await db.users.delete_one({"id": user["id"]})
+    return {"ok": True}
 
 app.include_router(api)
 
