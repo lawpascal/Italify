@@ -29,7 +29,7 @@ const DAYS = ["L", "M", "M", "G", "V", "S", "D"];
 
 function isoForMondayOffset(offset: number): string {
   const now = new Date();
-  const day = (now.getDay() + 6) % 7; // 0=Mon
+  const day = (now.getDay() + 6) % 7;
   const d = new Date(now);
   d.setDate(now.getDate() - day + offset);
   return d.toISOString().slice(0, 10);
@@ -71,11 +71,15 @@ export default function Home() {
   const pct = user.xp_needed > 0 ? (user.xp_in_level / user.xp_needed) * 100 : 100;
   const currentIndex = lessons.findIndex((l) => !l.completed);
   const activeIdx = currentIndex === -1 ? lessons.length - 1 : currentIndex;
-
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
+      {/* Sfondo decorativo a bolle */}
+      <View style={styles.bgBlob1} />
+      <View style={styles.bgBlob2} />
+      <View style={styles.bgBlob3} />
+
       <View style={styles.topBar}>
         <TouchableOpacity
           testID="level-badge"
@@ -157,7 +161,8 @@ export default function Home() {
               const isActive = i === activeIdx;
               const isLocked = i > activeIdx;
               return (
-                <View key={l.id} style={[styles.nodeRow, { alignItems: align }]}>
+                // FIX 1: paddingTop extra sul primo nodo attivo per fare spazio al tortellino
+                <View key={l.id} style={[styles.nodeRow, { alignItems: align }, isActive && { paddingTop: 54 }]}>
                   <TouchableOpacity
                     testID={`lesson-node-${i}`}
                     disabled={isLocked}
@@ -198,7 +203,40 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
+  safe: { flex: 1, backgroundColor: COLORS.bg, overflow: "hidden" },
+
+  // Sfondo decorativo
+  bgBlob1: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: COLORS.primary,
+    opacity: 0.06,
+    top: -80,
+    right: -80,
+  },
+  bgBlob2: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: COLORS.secondary,
+    opacity: 0.1,
+    top: 200,
+    left: -60,
+  },
+  bgBlob3: {
+    position: "absolute",
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: COLORS.success,
+    opacity: 0.06,
+    bottom: 100,
+    right: -40,
+  },
+
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -262,7 +300,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayDotDone: { backgroundColor: COLORS.success },
-  scroll: { padding: 20, paddingBottom: 100 },
+  // FIX 1: paddingTop aumentato per dare spazio al tortellino sul primo nodo
+  scroll: { padding: 20, paddingBottom: 100, paddingTop: 24 },
   empty: { alignItems: "center", paddingTop: 40, gap: 16 },
   emptyTitle: { fontSize: 20, fontWeight: "900", color: COLORS.text },
   emptyText: { textAlign: "center", color: COLORS.textMuted, fontSize: 15, lineHeight: 22, paddingHorizontal: 20 },
@@ -276,7 +315,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
-  path: { gap: 20, paddingTop: 12 },
+  path: { gap: 20 },
   nodeRow: { gap: 4 },
   node: {
     width: 84,
@@ -304,7 +343,7 @@ const styles = StyleSheet.create({
   nodeNum: { fontSize: 28, fontWeight: "900", color: "#fff" },
   mascotOnNode: {
     position: "absolute",
-    top: -46,
+    top: -52,
   },
   nodeTitle: { fontSize: 16, fontWeight: "800", color: COLORS.text, marginTop: 6, maxWidth: 200 },
   nodeMeta: { fontSize: 12, color: COLORS.textMuted },

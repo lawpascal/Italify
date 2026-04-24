@@ -1,0 +1,44 @@
+{
+  "summary": "Comprehensive backend testing of Tortellino API. All 22 pytest tests passed (100%). Verified JWT auth (admin seed + login, wrong password 401, register duplicate 400, /me with/without token), role-based access (student cannot POST /api/lessons -> 403), full lessons CRUD with exercise IDs preserved on update, progress/answer for multiple_choice, true_false, open_answer (case-insensitive), idempotent XP (already_solved=true and xp_awarded=0 on repeat), wrong answer gives 0 XP, complete-lesson updates streak/last_active_date, level thresholds exactly match spec (50 XP -> Lv2, 150 XP -> Lv3, 250 XP -> Lv4), saved-question add/list/delete. Admin auto-seed verified in backend logs. No MongoDB _id leakage observed in responses.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/register", "issue": "Password min_length=6 enforced but no complexity/uniqueness validation on name; acceptable for MVP"},
+      {"endpoint": "POST /api/progress/complete-lesson", "issue": "Accepts client-supplied xp_earned/correct_count without server recomputation; client could inflate stats (not used to mutate XP on server, so low risk, but stored as-is if persisted)"},
+      {"endpoint": "DELETE /api/saved", "issue": "Uses query params (not body) which is fine but inconsistent with POST /api/saved that uses JSON body"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_tortellino_api.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: server-side recomputation of xp_earned in /api/progress/complete-lesson to prevent client tampering",
+    "Frontend smoke testing not performed in this pass (backend-only per request). Main agent may want to request a frontend pass next."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 550 lines and acceptable — under 700-line threshold, well-structured with clear sections.",
+    "CORS uses allow_origins=['*'] with allow_credentials=True — browsers reject this combination. Since auth is Bearer-based (not cookies), it works, but consider explicit origin list for production.",
+    "Passwords hashed with bcrypt ($2b$) ✓, JWT secret from env ✓, DB_NAME from env ✓, no hardcoded URLs ✓.",
+    "MongoDB _id consistently excluded via projection {'_id': 0} ✓.",
+    "Admin seed is idempotent and updates password if changed ✓.",
+    "Exercise IDs preserved on lesson update by positional match — good for saved_questions integrity."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_tortellino_api.py (new)"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "Tests create TEST-prefixed lessons and test_*@test.com students during run; TEST lessons are deleted in cleanup. A few test students remain in DB (not cleaned, but isolated via unique UUID emails).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is fully green. Frontend (Expo) was not tested this iteration. Reuse /app/backend/tests/test_tortellino_api.py as regression suite. Admin login: lorenzopasqualot@gmail.com / Tortellino2026!. All endpoints require Bearer JWT except /api/, /api/auth/register, /api/auth/login.",
+  "rca_of_issue": "N/A — no failures."
+}

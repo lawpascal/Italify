@@ -1,0 +1,158 @@
+{
+  "theme": "light",
+  "archetype": "6 (Vibrant Play) - Adapted for DSA Accessibility",
+  "domain": "Education / Gamified Learning / Accessible App",
+  "typography": {
+    "primary_font": "Nunito",
+    "secondary_font": "Nunito",
+    "headings": {
+      "family": "Nunito, sans-serif",
+      "weights": ["700", "800", "900"],
+      "tracking": "tracking-normal",
+      "sizes": {
+        "h1": "text-3xl sm:text-4xl",
+        "h2": "text-2xl sm:text-3xl",
+        "h3": "text-xl sm:text-2xl"
+      }
+    },
+    "body": {
+      "family": "Nunito, sans-serif",
+      "weights": ["400", "500", "600", "700"],
+      "line_height": "leading-relaxed",
+      "sizes": {
+        "base": "text-base sm:text-lg",
+        "small": "text-sm",
+        "large": "text-lg sm:text-xl"
+      }
+    },
+    "accessibility_rules": [
+      "No justified text; always left-align body copy to assist tracking.",
+      "Use minimum 1.5x line height (leading-relaxed).",
+      "Avoid all-caps for long text; use only for short labels with wide tracking.",
+      "Ensure distinct letter shapes (I, l, 1) by using Nunito."
+    ]
+  },
+  "colors": {
+    "background": {
+      "main": "#F8F9FA",
+      "surface": "#FFFFFF",
+      "overlay": "rgba(43, 45, 66, 0.4)"
+    },
+    "brand": {
+      "primary": "#E63946",
+      "primary_hover": "#D62828",
+      "primary_active": "#B91C1C",
+      "secondary": "#FFD166",
+      "secondary_hover": "#FFC300",
+      "secondary_active": "#FFB703"
+    },
+    "feedback": {
+      "success": "#06D6A0",
+      "success_dark": "#04A77D",
+      "error": "#EF476F",
+      "error_dark": "#D83A5A",
+      "warning": "#FFD166",
+      "info": "#118AB2"
+    },
+    "text": {
+      "primary": "#2B2D42",
+      "secondary": "#6C757D",
+      "disabled": "#ADB5BD",
+      "inverse": "#FFFFFF"
+    },
+    "borders": {
+      "light": "#E9ECEF",
+      "default": "#DEE2E6",
+      "dark": "#CED4DA"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Mobile-first, generous whitespace to reduce cognitive load (DSA friendly).",
+    "container": "max-w-md mx-auto w-full min-h-screen bg-[#F8F9FA] shadow-2xl overflow-hidden flex flex-col relative",
+    "padding": {
+      "screen": "p-4 sm:p-6",
+      "card": "p-5",
+      "section": "py-8"
+    },
+    "border_radius": {
+      "button": "rounded-2xl",
+      "card": "rounded-3xl",
+      "input": "rounded-xl",
+      "badge": "rounded-full"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#E63946] text-white font-bold text-lg rounded-2xl border-b-4 border-[#B91C1C] active:border-b-0 active:translate-y-[4px] transition-all py-4 px-6 flex items-center justify-center w-full shadow-sm hover:brightness-110",
+      "secondary": "bg-[#FFD166] text-[#2B2D42] font-bold text-lg rounded-2xl border-b-4 border-[#FFB703] active:border-b-0 active:translate-y-[4px] transition-all py-4 px-6 flex items-center justify-center w-full shadow-sm hover:brightness-110",
+      "outline": "bg-white text-[#6C757D] font-bold text-lg rounded-2xl border-2 border-b-4 border-[#DEE2E6] active:border-b-2 active:translate-y-[2px] transition-all py-4 px-6 flex items-center justify-center w-full",
+      "success": "bg-[#06D6A0] text-white font-bold text-lg rounded-2xl border-b-4 border-[#04A77D] active:border-b-0 active:translate-y-[4px] transition-all py-4 px-6"
+    },
+    "cards": {
+      "default": "bg-white border-2 border-[#DEE2E6] rounded-3xl p-5 shadow-sm",
+      "interactive": "bg-white border-2 border-[#DEE2E6] border-b-4 rounded-3xl p-5 cursor-pointer active:border-b-2 active:translate-y-[2px] transition-all hover:bg-gray-50",
+      "selected": "bg-[#E63946]/10 border-2 border-[#E63946] border-b-4 rounded-3xl p-5 cursor-pointer text-[#E63946]"
+    },
+    "inputs": {
+      "default": "w-full bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-xl px-4 py-4 text-lg text-[#2B2D42] focus:border-[#118AB2] focus:ring-0 outline-none transition-colors placeholder:text-[#ADB5BD]"
+    },
+    "progress_bar": {
+      "wrapper": "w-full h-4 bg-[#DEE2E6] rounded-full overflow-hidden",
+      "fill_xp": "h-full bg-[#FFD166] rounded-full transition-all duration-500 ease-out",
+      "fill_lesson": "h-full bg-[#06D6A0] rounded-full transition-all duration-500 ease-out"
+    },
+    "navigation_bar": {
+      "container": "fixed bottom-0 max-w-md w-full bg-white border-t-2 border-[#DEE2E6] flex justify-around items-center py-3 px-2 pb-safe z-50",
+      "item": "flex flex-col items-center gap-1 p-2 rounded-xl text-[#ADB5BD] hover:text-[#2B2D42] transition-colors",
+      "item_active": "text-[#118AB2] bg-[#118AB2]/10"
+    }
+  },
+  "motion_and_interactions": {
+    "button_press": "Scale down slightly and reduce border-bottom width to simulate physical push.",
+    "level_unlock": "Bounce animation with scale up.",
+    "confetti": "Use react-confetti for the lesson completion screen.",
+    "mascot_jump": "Use framer-motion to animate the tortellino jumping between path nodes."
+  },
+  "specific_screens": {
+    "home_path": {
+      "layout": "Vertical scrollable area with a zig-zag placement of level nodes.",
+      "level_node": "w-20 h-20 rounded-full border-b-[6px] flex items-center justify-center text-2xl font-bold shadow-md relative",
+      "node_locked": "bg-[#DEE2E6] border-[#CED4DA] text-[#ADB5BD]",
+      "node_current": "bg-[#FFD166] border-[#FFB703] text-white ring-4 ring-[#FFD166]/30",
+      "node_completed": "bg-[#E63946] border-[#B91C1C] text-white"
+    },
+    "lesson_view": {
+      "header": "Top bar containing close button (X), Progress Bar, and Hearts/Lives icon.",
+      "content": "Large question text, followed by 3-4 interactive cards for multiple choice.",
+      "footer": "Fixed bottom area containing a giant 'Check' or 'Continue' button."
+    },
+    "celebration_screen": {
+      "layout": "Centered content, mascot image scaled up, large XP reward text (+15 XP), continue button."
+    }
+  },
+  "media": {
+    "mascot": {
+      "url": "https://customer-assets.emergentagent.com/job_italian-learn-89/artifacts/atsmyzpg_IMG_4328.jpeg",
+      "description": "The main Tortellino mascot. Use this as the app icon, on the welcome screen, jumping on the path, and in the celebration screen. Use with a rounded-full or custom mask if needed, as it has a red background."
+    },
+    "icons": {
+      "library": "lucide-react",
+      "streak_flame": "Flame (colored #FFD166 or #E63946)",
+      "xp_star": "Star (colored #FFD166)",
+      "lives_heart": "Heart (colored #EF476F)",
+      "close": "X (colored #ADB5BD)"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build this as a responsive web app that looks and feels like a mobile app. Constrain the main layout to 'max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden' to simulate a mobile screen on desktop.",
+    "Implement the Duolingo 'tactile' button style everywhere: solid background with a darker, thicker border-bottom, and translate-y on active state.",
+    "For the lesson path (Homepage), create a scrollable vertical container. Use absolute positioning or flex with alternating self-alignments (e.g., self-start, self-center, self-end) to create a winding path of level buttons.",
+    "Place the Tortellino mascot image on top of the currently active level node.",
+    "Ensure the UI is DSA-friendly: large fonts (Nunito), left-aligned text, high contrast, and no confusing background patterns. Keep the background a solid off-white (#F8F9FA).",
+    "Use framer-motion for the mascot jumps, button taps, and modal slide-ups.",
+    "For the lesson exercises, implement at least a Multiple Choice and a True/False component with clear selected/unselected states.",
+    "Include a fixed bottom navigation bar for the main screens (Home, Saved Questions, Profile).",
+    "Use Lucide icons for all UI iconography.",
+    "Add 'data-testid' to all interactive elements."
+  ]
+}
