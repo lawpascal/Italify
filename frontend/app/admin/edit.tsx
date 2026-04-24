@@ -348,22 +348,46 @@ function ExerciseEditor({
 
 {ex.type === "word_order" && (
   <View>
-    <Text style={styles.label}>Parole nell'ordine corretto (separate da spazio)</Text>
-    <TextInput
-      style={styles.input}
-      value={(ex.correct_order || []).join(" ")}
-      onChangeText={(t) => onChange({ correct_order: t.split(" ").filter(Boolean) })}
-      autoCapitalize="none"
-      autoCorrect={false}
-      spellCheck={false}
-      placeholder="es: non ho cose"
-      placeholderTextColor={COLORS.textDisabled}
-    />
-    {(ex.correct_order || []).length > 0 && (
-      <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
-        Parole rilevate: {(ex.correct_order || []).map((w, i) => `"${w}"`).join(" · ")}
-      </Text>
-    )}
+    <Text style={styles.label}>Parole nell'ordine corretto</Text>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+      {(ex.correct_order || []).map((word, wi) => (
+        <TouchableOpacity
+          key={wi}
+          style={{ flexDirection: "row", alignItems: "center", backgroundColor: COLORS.primary, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 }}
+          onPress={() => {
+            const newOrder = (ex.correct_order || []).filter((_, idx) => idx !== wi);
+            onChange({ correct_order: newOrder });
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>{word}</Text>
+          <Ionicons name="close" size={14} color="#fff" />
+        </TouchableOpacity>
+      ))}
+    </View>
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      <TextInput
+        style={[styles.input, { flex: 1, marginBottom: 0 }]}
+        placeholder="Scrivi una parola..."
+        placeholderTextColor={COLORS.textDisabled}
+        autoCapitalize="none"
+        autoCorrect={false}
+        onSubmitEditing={(e) => {
+          const word = e.nativeEvent.text.trim();
+          if (word) onChange({ correct_order: [...(ex.correct_order || []), word] });
+        }}
+        returnKeyType="done"
+      />
+      <TouchableOpacity
+        style={[styles.smallBtn, { marginTop: 0 }]}
+        onPress={() => {
+          const input = document.querySelector(`[data-wordorder="${index}"]`) as any;
+          const word = input?.value?.trim();
+          if (word) { onChange({ correct_order: [...(ex.correct_order || []), word] }); input.value = ""; }
+        }}
+      >
+        <Text style={styles.smallBtnText}>+</Text>
+      </TouchableOpacity>
+    </View>
   </View>
 )}
 
