@@ -346,16 +346,26 @@ function ExerciseEditor({
         </View>
       )}
 
-      {ex.type === "word_order" && (
-        <View>
-          <Text style={styles.label}>Parole nell'ordine corretto (separate da spazio)</Text>
-          <TextInput
-            style={styles.input}
-            value={(ex.correct_order || []).join(" ")}
-            onChangeText={(t) => onChange({ correct_order: t.trim().split(/\s+/).filter(Boolean) })}
-          />
-        </View>
-      )}
+{ex.type === "word_order" && (
+  <View>
+    <Text style={styles.label}>Parole nell'ordine corretto (separate da spazio)</Text>
+    <TextInput
+      style={styles.input}
+      value={(ex.correct_order || []).join(" ")}
+      onChangeText={(t) => onChange({ correct_order: t.split(" ").filter(Boolean) })}
+      autoCapitalize="none"
+      autoCorrect={false}
+      spellCheck={false}
+      placeholder="es: non ho cose"
+      placeholderTextColor={COLORS.textDisabled}
+    />
+    {(ex.correct_order || []).length > 0 && (
+      <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
+        Parole rilevate: {(ex.correct_order || []).map((w, i) => `"${w}"`).join(" · ")}
+      </Text>
+    )}
+  </View>
+)}
 
       {(ex.type === "audio" || ex.type === "video") && (
         <View>
