@@ -74,21 +74,22 @@ export default function Home() {
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      {/* Sfondo decorativo a bolle */}
+    <SafeAreaView style={[styles.safe, { backgroundColor: COLORS.bg }]} edges={["top"]}>
+      {/* Sfondo decorativo — 4 bolle */}
       <View style={styles.bgBlob1} />
       <View style={styles.bgBlob2} />
       <View style={styles.bgBlob3} />
+      <View style={styles.bgBlob4} />
 
       <View style={styles.topBar}>
         <TouchableOpacity
           testID="level-badge"
-          style={styles.levelBadge}
+          style={[styles.levelBadge, { backgroundColor: COLORS.surface, borderColor: COLORS.border }]}
           onPress={() => router.push("/(tabs)/profile")}
           activeOpacity={0.8}
         >
           <Ionicons name="star" size={18} color={COLORS.secondary} />
-          <Text style={styles.levelText}>Lv {user.level}</Text>
+          <Text style={[styles.levelText, { color: COLORS.text }]}>Lv {user.level}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -97,31 +98,31 @@ export default function Home() {
           activeOpacity={0.8}
           onPress={() => router.push("/(tabs)/profile")}
         >
-          <View style={styles.xpTrack}>
+          <View style={[styles.xpTrack, { backgroundColor: COLORS.border }]}>
             <View style={[styles.xpFill, { width: `${pct}%` }]} />
           </View>
-          <Text style={styles.xpText}>
+          <Text style={[styles.xpText, { color: COLORS.textMuted }]}>
             {user.xp_in_level}/{user.xp_needed} XP
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.streakBadge}>
+        <View style={[styles.streakBadge, { backgroundColor: COLORS.surface, borderColor: COLORS.border }]}>
           <Text style={styles.flame}>🔥</Text>
-          <Text style={styles.streakNum} testID="streak-count">{user.streak}</Text>
+          <Text style={[styles.streakNum, { color: COLORS.primary }]} testID="streak-count">{user.streak}</Text>
         </View>
       </View>
 
-      <View style={styles.weekStrip}>
+      <View style={[styles.weekStrip, { backgroundColor: COLORS.surface, borderColor: COLORS.border }]}>
         {DAYS.map((d, i) => {
           const iso = isoForMondayOffset(i);
           const done = user.streak_days?.includes(iso);
           const isToday = iso === todayIso;
           return (
             <View key={i} style={styles.dayCol}>
-              <Text style={[styles.dayLabel, isToday && { color: COLORS.primary, fontWeight: "800" }]}>
+              <Text style={[styles.dayLabel, { color: COLORS.textMuted }, isToday && { color: COLORS.primary, fontWeight: "800" }]}>
                 {d}
               </Text>
-              <View style={[styles.dayDot, done && styles.dayDotDone]}>
+              <View style={[styles.dayDot, { backgroundColor: COLORS.border }, done && styles.dayDotDone]}>
                 {done ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
               </View>
             </View>
@@ -138,8 +139,8 @@ export default function Home() {
         ) : lessons.length === 0 ? (
           <View style={styles.empty}>
             <Mascot size={120} />
-            <Text style={styles.emptyTitle}>Nessuna lezione ancora!</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: COLORS.text }]}>Nessuna lezione ancora!</Text>
+            <Text style={[styles.emptyText, { color: COLORS.textMuted }]}>
               {user.role === "admin"
                 ? "Vai al profilo per creare la tua prima lezione."
                 : "Il tuo docente deve ancora pubblicare lezioni. Torna presto!"}
@@ -161,7 +162,6 @@ export default function Home() {
               const isActive = i === activeIdx;
               const isLocked = i > activeIdx;
               return (
-                // FIX 1: paddingTop extra sul primo nodo attivo per fare spazio al tortellino
                 <View key={l.id} style={[styles.nodeRow, { alignItems: align }, isActive && { paddingTop: 54 }]}>
                   <TouchableOpacity
                     testID={`lesson-node-${i}`}
@@ -172,7 +172,7 @@ export default function Home() {
                       styles.node,
                       l.completed && styles.nodeCompleted,
                       isActive && styles.nodeActive,
-                      isLocked && styles.nodeLocked,
+                      isLocked && { backgroundColor: COLORS.border, borderBottomColor: COLORS.textDisabled },
                     ]}
                   >
                     {l.completed ? (
@@ -188,10 +188,10 @@ export default function Home() {
                       </View>
                     )}
                   </TouchableOpacity>
-                  <Text style={[styles.nodeTitle, { textAlign: align === "flex-start" ? "left" : "right" }]}>
+                  <Text style={[styles.nodeTitle, { color: COLORS.text, textAlign: align === "flex-start" ? "left" : "right" }]}>
                     {l.title}
                   </Text>
-                  <Text style={styles.nodeMeta}>{l.exercise_count} esercizi</Text>
+                  <Text style={[styles.nodeMeta, { color: COLORS.textMuted }]}>{l.exercise_count} esercizi</Text>
                 </View>
               );
             })}
@@ -203,148 +203,73 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg, overflow: "hidden" },
+  safe: { flex: 1, overflow: "hidden" },
 
-  // Sfondo decorativo
   bgBlob1: {
-    position: "absolute",
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: COLORS.primary,
-    opacity: 0.06,
-    top: -80,
-    right: -80,
+    position: "absolute", width: 300, height: 300, borderRadius: 150,
+    backgroundColor: "#E63946", opacity: 0.06, top: -80, right: -80,
   },
   bgBlob2: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: COLORS.secondary,
-    opacity: 0.1,
-    top: 200,
-    left: -60,
+    position: "absolute", width: 200, height: 200, borderRadius: 100,
+    backgroundColor: "#FFD166", opacity: 0.10, top: 200, left: -60,
   },
   bgBlob3: {
-    position: "absolute",
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: COLORS.success,
-    opacity: 0.06,
-    bottom: 100,
-    right: -40,
+    position: "absolute", width: 250, height: 250, borderRadius: 125,
+    backgroundColor: "#06D6A0", opacity: 0.06, bottom: 100, right: -40,
+  },
+  bgBlob4: {
+    position: "absolute", width: 180, height: 180, borderRadius: 90,
+    backgroundColor: "#FFD166", opacity: 0.08, bottom: 200, left: -30,
   },
 
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 16, paddingVertical: 10, gap: 10,
   },
   levelBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    gap: 6,
+    flexDirection: "row", alignItems: "center", borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 8, borderWidth: 2, gap: 6,
   },
-  levelText: { fontWeight: "800", color: COLORS.text },
+  levelText: { fontWeight: "800" },
   xpWrap: { flex: 1 },
-  xpTrack: {
-    height: 14,
-    backgroundColor: COLORS.border,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  xpFill: { height: "100%", backgroundColor: COLORS.secondary, borderRadius: 999 },
-  xpText: { fontSize: 11, color: COLORS.textMuted, marginTop: 3, textAlign: "center", fontWeight: "700" },
+  xpTrack: { height: 14, borderRadius: 999, overflow: "hidden" },
+  xpFill: { height: "100%", backgroundColor: "#FFD166", borderRadius: 999 },
+  xpText: { fontSize: 11, marginTop: 3, textAlign: "center", fontWeight: "700" },
   streakBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 2,
   },
   flame: { fontSize: 18 },
-  streakNum: { fontWeight: "800", color: COLORS.primary },
+  streakNum: { fontWeight: "800" },
   weekStrip: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: COLORS.surface,
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    flexDirection: "row", justifyContent: "space-around",
+    paddingHorizontal: 20, paddingVertical: 10,
+    marginHorizontal: 16, borderRadius: 16, borderWidth: 2,
   },
   dayCol: { alignItems: "center", gap: 4 },
-  dayLabel: { fontSize: 12, color: COLORS.textMuted, fontWeight: "700" },
-  dayDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: COLORS.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dayDotDone: { backgroundColor: COLORS.success },
-  // FIX 1: paddingTop aumentato per dare spazio al tortellino sul primo nodo
+  dayLabel: { fontSize: 12, fontWeight: "700" },
+  dayDot: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  dayDotDone: { backgroundColor: "#06D6A0" },
   scroll: { padding: 20, paddingBottom: 100, paddingTop: 24 },
   empty: { alignItems: "center", paddingTop: 40, gap: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: "900", color: COLORS.text },
-  emptyText: { textAlign: "center", color: COLORS.textMuted, fontSize: 15, lineHeight: 22, paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: "900" },
+  emptyText: { textAlign: "center", fontSize: 15, lineHeight: 22, paddingHorizontal: 20 },
   primaryBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderBottomWidth: 4,
-    borderBottomColor: COLORS.primaryDark,
-    marginTop: 8,
+    backgroundColor: "#E63946", paddingHorizontal: 20, paddingVertical: 14,
+    borderRadius: 14, borderBottomWidth: 4, borderBottomColor: "#B91C1C", marginTop: 8,
   },
   primaryBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
   path: { gap: 20 },
   nodeRow: { gap: 4 },
   node: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: COLORS.secondary,
-    borderBottomWidth: 6,
-    borderBottomColor: COLORS.secondaryDark,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
+    width: 84, height: 84, borderRadius: 42,
+    backgroundColor: "#FFD166", borderBottomWidth: 6, borderBottomColor: "#FFB703",
+    alignItems: "center", justifyContent: "center", position: "relative",
   },
-  nodeCompleted: {
-    backgroundColor: COLORS.success,
-    borderBottomColor: COLORS.successDark,
-  },
-  nodeActive: {
-    backgroundColor: COLORS.primary,
-    borderBottomColor: COLORS.primaryDark,
-  },
-  nodeLocked: {
-    backgroundColor: COLORS.border,
-    borderBottomColor: COLORS.textDisabled,
-  },
+  nodeCompleted: { backgroundColor: "#06D6A0", borderBottomColor: "#04A77D" },
+  nodeActive: { backgroundColor: "#E63946", borderBottomColor: "#B91C1C" },
   nodeNum: { fontSize: 28, fontWeight: "900", color: "#fff" },
-  mascotOnNode: {
-    position: "absolute",
-    top: -52,
-  },
-  nodeTitle: { fontSize: 16, fontWeight: "800", color: COLORS.text, marginTop: 6, maxWidth: 200 },
-  nodeMeta: { fontSize: 12, color: COLORS.textMuted },
+  mascotOnNode: { position: "absolute", top: -52 },
+  nodeTitle: { fontSize: 16, fontWeight: "800", marginTop: 6, maxWidth: 200 },
+  nodeMeta: { fontSize: 12 },
 });

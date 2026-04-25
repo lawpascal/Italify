@@ -20,7 +20,7 @@ import * as FileSystem from "expo-file-system";
 import { api } from "../../src/api";
 import { COLORS } from "../../src/theme";
 
-type ExType = "multiple_choice" | "true_false" | "right_wrong" | "open_answer" | "word_order" | "audio" | "video";
+type ExType = "multiple_choice" | "true_false" | "right_wrong" | "open_answer" | "word_order" | "audio" | "video" | "matching";
 type Ex = {
   id?: string;
   type: ExType;
@@ -33,6 +33,8 @@ type Ex = {
   media_base64?: string | null;
   media_mime?: string | null;
   explanation?: string;
+  matching_pairs?: { left: string; right: string }[];
+  matching_columns?: 2 | 3;
 };
 
 const TYPE_OPTIONS: { value: ExType; label: string }[] = [
@@ -41,6 +43,7 @@ const TYPE_OPTIONS: { value: ExType; label: string }[] = [
   { value: "right_wrong", label: "Giusto / Sbagliato" },
   { value: "open_answer", label: "Risposta aperta" },
   { value: "word_order", label: "Riordino parole" },
+  { value: "matching", label: "Abbinamento" },
   { value: "audio", label: "Audio" },
   { value: "video", label: "Video" },
 ];
@@ -105,22 +108,17 @@ export default function EditLesson() {
   };
 
   const save = async () => {
-    if (!title.trim()) {
-      Alert.alert("Errore", "Inserisci un titolo");
-      return;
-    }
-    // Validate exercises
+    if (!title.trim()) { Alert.alert("Errore", "Inserisci un titolo"); return; }
     for (const [i, ex] of exercises.entries()) {
       if (!ex.question.trim() && ex.type !== "audio" && ex.type !== "video") {
-        Alert.alert("Errore", `Esercizio ${i + 1}: inserisci la domanda`);
-        return;
+        Alert.alert("Errore", `Esercizio ${i + 1}: inserisci la domanda`); return;
+      }
+      if (ex.type === "matching" && (!ex.matching_pairs || ex.matching_pairs.length < 2)) {
+        Alert.alert("Errore", `Esercizio ${i + 1}: aggiungi almeno 2 coppie`); return;
       }
     }
     const payload = {
-      title,
-      description,
-      shuffle,
-      order,
+      title, description, shuffle, order,
       exercises: exercises.map((e) => ({
         type: e.type,
         question: e.question,
@@ -132,15 +130,14 @@ export default function EditLesson() {
         media_base64: e.media_base64 || undefined,
         media_mime: e.media_mime || undefined,
         explanation: e.explanation,
+        matching_pairs: e.matching_pairs,
+        matching_columns: e.matching_columns,
       })),
     };
     setSaving(true);
     try {
-      if (isNew) {
-        await api("/lessons", { method: "POST", body: payload });
-      } else {
-        await api(`/lessons/${id}`, { method: "PUT", body: payload });
-      }
+      if (isNew) { await api("/lessons", { method: "POST", body: payload }); }
+      else { await api(`/lessons/${id}`, { method: "PUT", body: payload }); }
       router.back();
     } catch (e: any) {
       Alert.alert("Errore", e.message);
@@ -150,30 +147,19 @@ export default function EditLesson() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: 60 }} size="large" />
-      </SafeAreaView>
-    );
+    return <SafeAreaView style={styles.safe}><ActivityIndicator color={COLORS.primary} style={{ marginTop: 60 }} size="large" /></SafeAreaView>;
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={26} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.title}>{isNew ? "Nuova lezione" : "Modifica lezione"}</Text>
           <TouchableOpacity onPress={save} disabled={saving} testID="save-lesson">
-            {saving ? (
-              <ActivityIndicator color={COLORS.primary} />
-            ) : (
-              <Text style={styles.saveText}>Salva</Text>
-            )}
+            {saving ? <ActivityIndicator color={COLORS.primary} /> : <Text style={styles.saveText}>Salva</Text>}
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -181,13 +167,7 @@ export default function EditLesson() {
           <TextInput style={styles.input} value={title} onChangeText={setTitle} testID="lesson-title-input" />
 
           <Text style={styles.label}>Descrizione</Text>
-          <TextInput
-            style={[styles.input, { minHeight: 80 }]}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            testID="lesson-desc-input"
-          />
+          <TextInput style={[styles.input, { minHeight: 80 }]} value={description} onChangeText={setDescription} multiline testID="lesson-desc-input" />
 
           <View style={styles.rowBetween}>
             <Text style={styles.label}>Ordine casuale esercizi</Text>
@@ -195,20 +175,13 @@ export default function EditLesson() {
           </View>
 
           <Text style={styles.label}>Posizione in lista</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={String(order)}
-            onChangeText={(t) => setOrder(parseInt(t || "0", 10) || 0)}
-          />
+          <TextInput style={styles.input} keyboardType="number-pad" value={String(order)} onChangeText={(t) => setOrder(parseInt(t || "0", 10) || 0)} />
 
           <View style={{ marginTop: 20, gap: 12 }}>
             <Text style={styles.sectionTitle}>Esercizi ({exercises.length})</Text>
             {exercises.map((ex, i) => (
               <ExerciseEditor
-                key={i}
-                ex={ex}
-                index={i}
+                key={i} ex={ex} index={i}
                 onChange={(patch) => updateEx(i, patch)}
                 onRemove={() => removeEx(i)}
                 onPickMedia={(kind) => pickMedia(i, kind)}
@@ -225,19 +198,35 @@ export default function EditLesson() {
   );
 }
 
-function ExerciseEditor({
-  ex,
-  index,
-  onChange,
-  onRemove,
-  onPickMedia,
-}: {
-  ex: Ex;
-  index: number;
+function ExerciseEditor({ ex, index, onChange, onRemove, onPickMedia }: {
+  ex: Ex; index: number;
   onChange: (p: Partial<Ex>) => void;
   onRemove: () => void;
   onPickMedia: (kind: "audio" | "video" | "image") => void;
 }) {
+  const [wordInput, setWordInput] = useState("");
+
+  const addWord = () => {
+    const word = wordInput.trim();
+    if (!word) return;
+    onChange({ correct_order: [...(ex.correct_order || []), word] });
+    setWordInput("");
+  };
+
+  const updatePair = (i: number, side: "left" | "right", value: string) => {
+    const pairs = [...(ex.matching_pairs || [])];
+    pairs[i] = { ...pairs[i], [side]: value };
+    onChange({ matching_pairs: pairs });
+  };
+
+  const addPair = () => {
+    onChange({ matching_pairs: [...(ex.matching_pairs || []), { left: "", right: "" }] });
+  };
+
+  const removePair = (i: number) => {
+    onChange({ matching_pairs: (ex.matching_pairs || []).filter((_, idx) => idx !== i) });
+  };
+
   return (
     <View style={styles.exCard}>
       <View style={styles.rowBetween}>
@@ -252,16 +241,16 @@ function ExerciseEditor({
           <TouchableOpacity
             key={t.value}
             style={[styles.typeChip, ex.type === t.value && styles.typeChipActive]}
-            onPress={() =>
-              onChange({
-                type: t.value,
-                options: t.value === "multiple_choice" ? ex.options || ["", ""] : undefined,
-                correct_index: t.value === "multiple_choice" ? 0 : undefined,
-                correct_bool: t.value === "true_false" || t.value === "right_wrong" ? true : undefined,
-                accepted_answers: t.value === "open_answer" ? ex.accepted_answers || [""] : undefined,
-                correct_order: t.value === "word_order" ? ex.correct_order || [] : undefined,
-              })
-            }
+            onPress={() => onChange({
+              type: t.value,
+              options: t.value === "multiple_choice" ? ex.options || ["", ""] : undefined,
+              correct_index: t.value === "multiple_choice" ? 0 : undefined,
+              correct_bool: t.value === "true_false" || t.value === "right_wrong" ? true : undefined,
+              accepted_answers: t.value === "open_answer" ? ex.accepted_answers || [""] : undefined,
+              correct_order: t.value === "word_order" ? ex.correct_order || [] : undefined,
+              matching_pairs: t.value === "matching" ? ex.matching_pairs || [{ left: "", right: "" }, { left: "", right: "" }] : undefined,
+              matching_columns: t.value === "matching" ? (ex.matching_columns || 2) : undefined,
+            })}
           >
             <Text style={[styles.typeChipText, ex.type === t.value && { color: "#fff" }]}>{t.label}</Text>
           </TouchableOpacity>
@@ -269,12 +258,7 @@ function ExerciseEditor({
       </View>
 
       <Text style={styles.label}>Domanda / Istruzione</Text>
-      <TextInput
-        style={styles.input}
-        value={ex.question}
-        onChangeText={(t) => onChange({ question: t })}
-        multiline
-      />
+      <TextInput style={styles.input} value={ex.question} onChangeText={(t) => onChange({ question: t })} multiline />
 
       {ex.type === "multiple_choice" && (
         <View style={{ gap: 6 }}>
@@ -282,38 +266,19 @@ function ExerciseEditor({
           {(ex.options || []).map((opt, i) => (
             <View key={i} style={styles.optRow}>
               <TouchableOpacity onPress={() => onChange({ correct_index: i })} style={styles.radio}>
-                <Ionicons
-                  name={ex.correct_index === i ? "radio-button-on" : "radio-button-off"}
-                  size={22}
-                  color={ex.correct_index === i ? COLORS.success : COLORS.textDisabled}
-                />
+                <Ionicons name={ex.correct_index === i ? "radio-button-on" : "radio-button-off"} size={22} color={ex.correct_index === i ? COLORS.success : COLORS.textDisabled} />
               </TouchableOpacity>
               <TextInput
                 style={[styles.input, { flex: 1, marginBottom: 0 }]}
                 value={opt}
-                onChangeText={(t) => {
-                  const newOpts = [...(ex.options || [])];
-                  newOpts[i] = t;
-                  onChange({ options: newOpts });
-                }}
+                onChangeText={(t) => { const newOpts = [...(ex.options || [])]; newOpts[i] = t; onChange({ options: newOpts }); }}
               />
-              <TouchableOpacity
-                onPress={() => {
-                  const newOpts = (ex.options || []).filter((_, idx) => idx !== i);
-                  onChange({
-                    options: newOpts,
-                    correct_index: ex.correct_index === i ? 0 : ex.correct_index,
-                  });
-                }}
-              >
+              <TouchableOpacity onPress={() => { const newOpts = (ex.options || []).filter((_, idx) => idx !== i); onChange({ options: newOpts, correct_index: ex.correct_index === i ? 0 : ex.correct_index }); }}>
                 <Ionicons name="close-circle" size={22} color={COLORS.error} />
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity
-            onPress={() => onChange({ options: [...(ex.options || []), ""] })}
-            style={styles.smallBtn}
-          >
+          <TouchableOpacity onPress={() => onChange({ options: [...(ex.options || []), ""] })} style={styles.smallBtn}>
             <Text style={styles.smallBtnText}>+ Opzione</Text>
           </TouchableOpacity>
         </View>
@@ -322,11 +287,7 @@ function ExerciseEditor({
       {(ex.type === "true_false" || ex.type === "right_wrong") && (
         <View style={styles.typeRow}>
           {[true, false].map((val) => (
-            <TouchableOpacity
-              key={String(val)}
-              style={[styles.typeChip, ex.correct_bool === val && styles.typeChipActive]}
-              onPress={() => onChange({ correct_bool: val })}
-            >
+            <TouchableOpacity key={String(val)} style={[styles.typeChip, ex.correct_bool === val && styles.typeChipActive]} onPress={() => onChange({ correct_bool: val })}>
               <Text style={[styles.typeChipText, ex.correct_bool === val && { color: "#fff" }]}>
                 Corretta: {ex.type === "true_false" ? (val ? "Vero" : "Falso") : val ? "Giusto" : "Sbagliato"}
               </Text>
@@ -338,166 +299,141 @@ function ExerciseEditor({
       {ex.type === "open_answer" && (
         <View>
           <Text style={styles.label}>Risposte accettate (separate da virgola)</Text>
-          <TextInput
-            style={styles.input}
-            value={(ex.accepted_answers || []).join(", ")}
-            onChangeText={(t) => onChange({ accepted_answers: t.split(",").map((s) => s.trim()).filter(Boolean) })}
-          />
+          <TextInput style={styles.input} value={(ex.accepted_answers || []).join(", ")} onChangeText={(t) => onChange({ accepted_answers: t.split(",").map((s) => s.trim()).filter(Boolean) })} />
         </View>
       )}
 
-{ex.type === "word_order" && (
-  <View>
-    <Text style={styles.label}>Parole nell'ordine corretto</Text>
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-      {(ex.correct_order || []).map((word, wi) => (
-        <TouchableOpacity
-          key={wi}
-          style={{ flexDirection: "row", alignItems: "center", backgroundColor: COLORS.primary, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 }}
-          onPress={() => {
-            const newOrder = (ex.correct_order || []).filter((_, idx) => idx !== wi);
-            onChange({ correct_order: newOrder });
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>{word}</Text>
-          <Ionicons name="close" size={14} color="#fff" />
-        </TouchableOpacity>
-      ))}
-    </View>
-    <View style={{ flexDirection: "row", gap: 8 }}>
-      <TextInput
-        style={[styles.input, { flex: 1, marginBottom: 0 }]}
-        placeholder="Scrivi una parola..."
-        placeholderTextColor={COLORS.textDisabled}
-        autoCapitalize="none"
-        autoCorrect={false}
-        onSubmitEditing={(e) => {
-          const word = e.nativeEvent.text.trim();
-          if (word) onChange({ correct_order: [...(ex.correct_order || []), word] });
-        }}
-        returnKeyType="done"
-      />
-      <TouchableOpacity
-        style={[styles.smallBtn, { marginTop: 0 }]}
-        onPress={() => {
-          const input = document.querySelector(`[data-wordorder="${index}"]`) as any;
-          const word = input?.value?.trim();
-          if (word) { onChange({ correct_order: [...(ex.correct_order || []), word] }); input.value = ""; }
-        }}
-      >
-        <Text style={styles.smallBtnText}>+</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
+      {ex.type === "word_order" && (
+        <View>
+          <Text style={styles.label}>Parole nell'ordine corretto</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10, minHeight: 36 }}>
+            {(ex.correct_order || []).length === 0 && (
+              <Text style={{ color: COLORS.textDisabled, fontStyle: "italic", fontSize: 13 }}>Nessuna parola ancora</Text>
+            )}
+            {(ex.correct_order || []).map((word, wi) => (
+              <TouchableOpacity key={wi} style={styles.wordChip} onPress={() => onChange({ correct_order: (ex.correct_order || []).filter((_, idx) => idx !== wi) })}>
+                <Text style={styles.wordChipText}>{word}</Text>
+                <Ionicons name="close" size={14} color="#fff" />
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.wordInputRow}>
+            <TextInput
+              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              placeholder="Scrivi una parola e premi +"
+              placeholderTextColor={COLORS.textDisabled}
+              value={wordInput}
+              onChangeText={setWordInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={addWord}
+            />
+            <TouchableOpacity style={styles.addWordBtn} onPress={addWord}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4 }}>Tocca una parola per rimuoverla</Text>
+        </View>
+      )}
+
+      {/* MATCHING */}
+      {ex.type === "matching" && (
+        <View>
+          <Text style={styles.label}>Numero di colonne</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+            {[2, 3].map((col) => (
+              <TouchableOpacity
+                key={col}
+                style={[styles.typeChip, (ex.matching_columns || 2) === col && styles.typeChipActive]}
+                onPress={() => onChange({ matching_columns: col as 2 | 3 })}
+              >
+                <Text style={[styles.typeChipText, (ex.matching_columns || 2) === col && { color: "#fff" }]}>
+                  {col} colonne
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Coppie da abbinare</Text>
+          {(ex.matching_pairs || []).map((pair, pi) => (
+            <View key={pi} style={styles.pairRow}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Sinistra"
+                placeholderTextColor={COLORS.textDisabled}
+                value={pair.left}
+                onChangeText={(t) => updatePair(pi, "left", t)}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Ionicons name="swap-horizontal" size={20} color={COLORS.textMuted} />
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Destra"
+                placeholderTextColor={COLORS.textDisabled}
+                value={pair.right}
+                onChangeText={(t) => updatePair(pi, "right", t)}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity onPress={() => removePair(pi)}>
+                <Ionicons name="close-circle" size={22} color={COLORS.error} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity style={styles.smallBtn} onPress={addPair}>
+            <Text style={styles.smallBtnText}>+ Coppia</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {(ex.type === "audio" || ex.type === "video") && (
         <View>
           <Text style={styles.label}>{ex.type === "audio" ? "Audio" : "Video"} caricato</Text>
-          <TouchableOpacity
-            style={styles.smallBtn}
-            onPress={() => onPickMedia(ex.type === "audio" ? "audio" : "video")}
-          >
-            <Text style={styles.smallBtnText}>
-              {ex.media_base64 ? "Sostituisci file" : `Carica ${ex.type}`}
-            </Text>
+          <TouchableOpacity style={styles.smallBtn} onPress={() => onPickMedia(ex.type === "audio" ? "audio" : "video")}>
+            <Text style={styles.smallBtnText}>{ex.media_base64 ? "Sostituisci file" : `Carica ${ex.type}`}</Text>
           </TouchableOpacity>
-          {ex.media_base64 ? (
-            <Text style={{ color: COLORS.success, marginTop: 4, fontSize: 12 }}>
-              ✓ File caricato ({ex.media_mime || "media"})
-            </Text>
-          ) : null}
+          {ex.media_base64 ? <Text style={{ color: COLORS.success, marginTop: 4, fontSize: 12 }}>✓ File caricato ({ex.media_mime || "media"})</Text> : null}
         </View>
       )}
 
       <Text style={styles.label}>Immagine allegata (opzionale)</Text>
       <TouchableOpacity style={styles.smallBtn} onPress={() => onPickMedia("image")}>
-        <Text style={styles.smallBtnText}>
-          {ex.media_base64 && (ex.media_mime || "").startsWith("image") ? "Sostituisci immagine" : "Carica immagine"}
-        </Text>
+        <Text style={styles.smallBtnText}>{ex.media_base64 && (ex.media_mime || "").startsWith("image") ? "Sostituisci immagine" : "Carica immagine"}</Text>
       </TouchableOpacity>
 
       <Text style={styles.label}>Spiegazione (mostrata dopo la risposta)</Text>
-      <TextInput
-        style={[styles.input, { minHeight: 60 }]}
-        value={ex.explanation || ""}
-        onChangeText={(t) => onChange({ explanation: t })}
-        multiline
-      />
+      <TextInput style={[styles.input, { minHeight: 60 }]} value={ex.explanation || ""} onChangeText={(t) => onChange({ explanation: t })} multiline />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.border,
-  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 2, borderBottomColor: COLORS.border },
   title: { fontSize: 18, fontWeight: "900", color: COLORS.text },
   saveText: { color: COLORS.primary, fontWeight: "900", fontSize: 16 },
   scroll: { padding: 16, paddingBottom: 80 },
   label: { fontSize: 13, fontWeight: "700", color: COLORS.text, marginTop: 12, marginBottom: 6 },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 15,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
+  input: { backgroundColor: COLORS.surface, borderWidth: 2, borderColor: COLORS.border, borderRadius: 12, padding: 12, fontSize: 15, color: COLORS.text, marginBottom: 4 },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 14 },
   sectionTitle: { fontSize: 17, fontWeight: "900", color: COLORS.text, marginBottom: 6 },
-  exCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
+  exCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, borderWidth: 2, borderColor: COLORS.border },
   exTitle: { fontSize: 15, fontWeight: "900", color: COLORS.primary },
   typeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
-  typeChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: COLORS.bg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  typeChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
   typeChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primaryDark },
   typeChipText: { fontSize: 12, color: COLORS.text, fontWeight: "700" },
   optRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   radio: { padding: 4 },
-  smallBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    marginTop: 6,
-  },
+  smallBtn: { alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: "#fff", borderWidth: 2, borderColor: COLORS.primary, marginTop: 6 },
   smallBtnText: { color: COLORS.primary, fontWeight: "800", fontSize: 13 },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: COLORS.primary,
-    backgroundColor: "#fff",
-    marginTop: 6,
-  },
+  addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 14, borderRadius: 14, borderWidth: 2, borderStyle: "dashed", borderColor: COLORS.primary, backgroundColor: "#fff", marginTop: 6 },
   addBtnText: { color: COLORS.primary, fontWeight: "800" },
+  wordChip: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.primary, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  wordChipText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  wordInputRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+  addWordBtn: { backgroundColor: COLORS.primary, borderRadius: 12, width: 48, height: 48, alignItems: "center", justifyContent: "center" },
+  pairRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
 });

@@ -67,13 +67,13 @@ def decode_token(token: str) -> dict:
 
 def xp_for_level(level: int) -> int:
     """Cumulative XP required to REACH level (level 1 start = 0 XP needed)."""
-    # Lv1 -> Lv2 at 50xp; Lv2 -> Lv3 at 50+100=150; each subsequent +100
+    # Lv1 -> Lv2 at 100xp; Lv2 -> Lv3 at 100+200=300; each subsequent +200
     if level <= 1:
         return 0
     if level == 2:
-        return 50
+        return 100
     # level >= 3
-    return 50 + (level - 2) * 100
+    return 100 + (level - 2) * 200
 
 
 def compute_level(total_xp: int) -> dict:

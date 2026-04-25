@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api, setToken, getToken } from "./api";
+import { applyTheme, DARK_COLORS, LIGHT_COLORS, COLORS } from "./theme";
 
 export type User = {
   id: string;
@@ -22,15 +24,36 @@ type Ctx = {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  isDark: boolean;
+  toggleTheme: () => void;
 };
 
 const AuthCtx = createContext<Ctx>({} as Ctx);
-
 export const useAuth = () => useContext(AuthCtx);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDark, setIsDark] = useState(false);
+  const [, forceUpdate] = useState(0);
+
+  // Carica preferenza tema salvata
+  useEffect(() => {
+    AsyncStorage.getItem("theme").then((val) => {
+      const dark = val === "dark";
+      setIsDark(dark);
+      applyTheme(dark);
+      forceUpdate((n) => n + 1);
+    });
+  }, []);
+
+  const toggleTheme = async () => {
+    const newDark = !isDark;
+    setIsDark(newDark);
+    applyTheme(newDark);
+    await AsyncStorage.setItem("theme", newDark ? "dark" : "light");
+    forceUpdate((n) => n + 1);
+  };
 
   const refresh = async () => {
     try {
@@ -80,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthCtx.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthCtx.Provider value={{ user, loading, login, register, logout, refresh, isDark, toggleTheme }}>
       {children}
     </AuthCtx.Provider>
   );
