@@ -29,7 +29,8 @@ type Exercise = {
     | "open_answer"
     | "word_order"
     | "audio"
-    | "video";
+    | "video"
+    | "matching";
   question: string;
   options?: string[];
   correct_index?: number | null;
@@ -41,6 +42,8 @@ type Exercise = {
   media_url?: string;
   media_mime?: string;
   explanation?: string;
+  matching_pairs?: { left: string; right: string }[];
+  matching_columns?: 2 | 3;
 };
 
 type Lesson = {
@@ -113,14 +116,27 @@ export default function LessonScreen() {
   const [pickedWords, setPickedWords] = useState<string[]>([]);
   const [availableWords, setAvailableWords] = useState<{ word: string; key: number }[]>([]);
 
+  // Matching state: array of [leftIndex, rightIndex] pairs
+  const [matchingPairs, setMatchingPairs] = useState<[number, number][]>([]);
+  const [rightSideOrder, setRightSideOrder] = useState<{ right: string; key: number; originalIdx: number }[]>([]);
+  const [selectedLeftIdx, setSelectedLeftIdx] = useState<number | null>(null);
+
   useEffect(() => {
     setAnswer(null);
     setResult(null);
     setPickedWords([]);
+    setMatchingPairs([]);
+    setSelectedLeftIdx(null);
     if (current?.type === "word_order") {
       setAvailableWords(scrambled.map((w, i) => ({ word: w, key: i })));
     } else {
       setAvailableWords([]);
+    }
+    if (current?.type === "matching" && current.matching_pairs) {
+      const rightPairs = shuffleArr(current.matching_pairs.map((p, i) => ({ right: p.right, key: i, originalIdx: i })));
+      setRightSideOrder(rightPairs);
+    } else {
+      setRightSideOrder([]);
     }
   }, [current?.id]);
 
@@ -169,10 +185,30 @@ export default function LessonScreen() {
 
   const progressPct = ((idx + (result ? 1 : 0)) / order.length) * 100;
 
+  // Format answer for submission
+  const formatAnswer = () => {
+    if (current?.type === "matching") {
+      return matchingPairs.map(([leftIdx, rightIdx]) => ({
+        left: current.matching_pairs![leftIdx].left,
+        right: rightSideOrder[rightIdx]?.right,
+      }));
+    }
+    return answer;
+  };
+
+  // Check if answer is complete
+  const isAnswerComplete = () => {
+    if (current?.type === "matching") {
+      return matchingPairs.length === (current.matching_pairs?.length || 0);
+    }
+    return answer !== null && answer !== undefined && (!Array.isArray(answer) || answer.length > 0);
+  };
+
   const submit = async () => {
     if (!current) return;
-    if (answer === null || answer === undefined || (Array.isArray(answer) && answer.length === 0)) return;
+    if (!isAnswerComplete()) return;
     try {
+      const submitAnswer = formatAnswer();
       const res = await api<{
         correct: boolean;
         xp_awarded: number;
@@ -180,7 +216,7 @@ export default function LessonScreen() {
         explanation?: string;
       }>("/progress/answer", {
         method: "POST",
-        body: { lesson_id: lesson.id, exercise_id: current.id, answer },
+        body: { lesson_id: lesson.id, exercise_id: current.id, answer: submitAnswer },
       });
 
       // FIX 6: in modalità ripasso, se sbagliato non mostrare la risposta — far riprovare
@@ -213,8 +249,14 @@ export default function LessonScreen() {
     setAnswer(null);
     setResult(null);
     setPickedWords([]);
+    setMatchingPairs([]);
+    setSelectedLeftIdx(null);
     if (current?.type === "word_order") {
       setAvailableWords(scrambled.map((w, i) => ({ word: w, key: i })));
+    }
+    if (current?.type === "matching" && current.matching_pairs) {
+      const rightPairs = shuffleArr(current.matching_pairs.map((p, i) => ({ right: p.right, key: i, originalIdx: i })));
+      setRightSideOrder(rightPairs);
     }
   };
 
@@ -456,6 +498,113 @@ export default function LessonScreen() {
             </View>
           )}
 
+          {/* Matching exercise */}
+          {current?.type === "matching" && current.matching_pairs && (
+            <View style={styles.matchingContainer}>
+              <View style={styles.matchingGrid}>
+                {/* Left column */}
+                <View style={styles.matchingColumn}>
+                  <Text style={styles.matchingLabel}>Elementi da abbinare</Text>
+                  {current.matching_pairs.map((pair, leftIdx) => {
+                    const isPaired = matchingPairs.some(([l]) => l === leftIdx);
+                    const isSelected = selectedLeftIdx === leftIdx;
+                    const matchedRightIdx = matchingPairs.find(([l]) => l === leftIdx)?.[1];
+                    const matchedCorrectly = result && current.matching_pairs![leftIdx].right === rightSideOrder[matchedRightIdx || 0]?.right;
+                    const matchedIncorrectly = result && isPaired && !matchedCorrectly;
+                    return (
+                      <TouchableOpacity
+                        key={`left-${leftIdx}`}
+                        style={[
+                          styles.matchingItem,
+                          isSelected && styles.matchingItemSelected,
+                          isPaired && styles.matchingItemConnected,
+                          matchedCorrectly && styles.matchingItemCorrect,
+                          matchedIncorrectly && styles.matchingItemWrong,
+                        ]}
+                        onPress={() => {
+                          if (result) return;
+                          if (isSelected) {
+                            setSelectedLeftIdx(null);
+                          } else {
+                            setSelectedLeftIdx(leftIdx);
+                          }
+                        }}
+                        disabled={!!result}
+                      >
+                        <Text style={styles.matchingItemText}>{pair.left}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Right column */}
+                <View style={styles.matchingColumn}>
+                  <Text style={styles.matchingLabel}>Corrispondenti</Text>
+                  {rightSideOrder.map((item, rightDisplayIdx) => {
+                    const isMatched = matchingPairs.some(([, r]) => r === rightDisplayIdx);
+                    const isSelectableTarget = selectedLeftIdx !== null && !isMatched;
+                    return (
+                      <TouchableOpacity
+                        key={item.key}
+                        style={[
+                          styles.matchingItem,
+                          isSelectableTarget && styles.matchingItemSelectable,
+                          isMatched && styles.matchingItemConnected,
+                          result && isMatched && current.matching_pairs![matchingPairs.find(([, r]) => r === rightDisplayIdx)![0]]?.right === item.right && styles.matchingItemCorrect,
+                          result && isMatched && current.matching_pairs![matchingPairs.find(([, r]) => r === rightDisplayIdx)![0]]?.right !== item.right && styles.matchingItemWrong,
+                        ]}
+                        onPress={() => {
+                          if (result) return;
+                          if (selectedLeftIdx !== null && !isMatched) {
+                            // Add pair
+                            setMatchingPairs((prev) => [...prev, [selectedLeftIdx, rightDisplayIdx]]);
+                            setSelectedLeftIdx(null);
+                          } else if (isMatched && selectedLeftIdx !== null) {
+                            // Replace pair
+                            const pairIdx = matchingPairs.findIndex(([, r]) => r === rightDisplayIdx);
+                            setMatchingPairs((prev) => [
+                              ...prev.slice(0, pairIdx),
+                              [selectedLeftIdx, rightDisplayIdx],
+                              ...prev.slice(pairIdx + 1),
+                            ]);
+                            setSelectedLeftIdx(null);
+                          } else if (isMatched && selectedLeftIdx === null) {
+                            // Remove pair
+                            setMatchingPairs((prev) => prev.filter(([, r]) => r !== rightDisplayIdx));
+                          }
+                        }}
+                        disabled={!!result}
+                      >
+                        <Text style={styles.matchingItemText}>{item.right}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Current pairs display */}
+              {matchingPairs.length > 0 && (
+                <View style={styles.matchingAnswer}>
+                  <Text style={styles.matchingAnswerTitle}>Abbinamenti ({matchingPairs.length}/{current.matching_pairs.length}):</Text>
+                  {matchingPairs.map(([leftIdx, rightIdx], pIdx) => (
+                    <View key={`pair-${pIdx}`} style={styles.matchingPair}>
+                      <Text style={styles.matchingPairText}>
+                        {current.matching_pairs![leftIdx].left} → {rightSideOrder[rightIdx]?.right}
+                      </Text>
+                      {!result && (
+                        <TouchableOpacity
+                          onPress={() => setMatchingPairs((prev) => prev.filter((_, i) => i !== pIdx))}
+                        >
+                          <Ionicons name="close-circle" size={20} color={COLORS.error} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* FIX 3: audio/video — gestione migliorata */}
           {(current?.type === "audio" || current?.type === "video") && (
             <AudioVideoBox
@@ -481,9 +630,9 @@ export default function LessonScreen() {
           {!result ? (
             <TouchableOpacity
               testID="submit-answer"
-              style={[styles.primaryBtn, (answer === null || answer === undefined || (Array.isArray(answer) && answer.length === 0)) && { opacity: 0.5 }]}
+              style={[styles.primaryBtn, !isAnswerComplete() && { opacity: 0.5 }]}
               onPress={submit}
-              disabled={answer === null || answer === undefined || (Array.isArray(answer) && answer.length === 0)}
+              disabled={!isAnswerComplete()}
             >
               <Text style={styles.primaryBtnText}>Controlla</Text>
             </TouchableOpacity>
@@ -752,4 +901,30 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: COLORS.primary, backgroundColor: "#fff",
   },
   outlineBtnText: { color: COLORS.primary, fontWeight: "900", fontSize: 16 },
+
+  // Matching styles
+  matchingContainer: { paddingVertical: 12, gap: 16 },
+  matchingGrid: { flexDirection: "row", gap: 12 },
+  matchingColumn: { flex: 1, gap: 10 },
+  matchingLabel: { fontSize: 13, fontWeight: "700", color: COLORS.textMuted, marginBottom: 4 },
+  matchingItem: {
+    paddingVertical: 14, paddingHorizontal: 12, borderRadius: 12, borderWidth: 2,
+    borderColor: COLORS.border, backgroundColor: COLORS.surface, minHeight: 56, justifyContent: "center",
+  },
+  matchingItemSelected: { borderWidth: 3, borderColor: COLORS.primary, backgroundColor: "#e3f2fd" },
+  matchingItemSelectable: { backgroundColor: "#f0f8ff", borderColor: COLORS.info, borderWidth: 2, borderStyle: "dashed" },
+  matchingItemConnected: { backgroundColor: "#e8f5e9", borderColor: COLORS.success, borderWidth: 2 },
+  matchingItemCorrect: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+  matchingItemWrong: { backgroundColor: COLORS.error, borderColor: COLORS.error },
+  matchingItemText: { fontSize: 15, fontWeight: "600", color: COLORS.text, textAlign: "center" },
+  matchingAnswer: {
+    backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 2, borderColor: COLORS.border,
+    padding: 12, gap: 8,
+  },
+  matchingAnswerTitle: { fontSize: 13, fontWeight: "700", color: COLORS.textMuted },
+  matchingPair: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingVertical: 8, paddingHorizontal: 10, backgroundColor: COLORS.bg, borderRadius: 8,
+  },
+  matchingPairText: { flex: 1, fontSize: 14, fontWeight: "600", color: COLORS.text },
 });
