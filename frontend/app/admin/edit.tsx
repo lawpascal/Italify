@@ -100,7 +100,7 @@ export default function EditLesson() {
     if (res.canceled || !res.assets?.[0]) return;
     const asset = res.assets[0];
     try {
-      const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: "base64" });
       updateEx(i, { media_base64: b64, media_mime: asset.mimeType || undefined });
     } catch (e: any) {
       Alert.alert("Errore caricamento", e.message);

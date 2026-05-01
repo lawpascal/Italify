@@ -149,10 +149,15 @@ class LoginIn(BaseModel):
     password: str
 
 
+class MatchingPair(BaseModel):
+    left: str
+    right: str
+
+
 class ExerciseIn(BaseModel):
-    # types: multiple_choice, true_false, right_wrong, open_answer, word_order, audio, video
+    # types: multiple_choice, true_false, right_wrong, open_answer, word_order, audio, video, matching
     type: Literal[
-        "multiple_choice", "true_false", "right_wrong", "open_answer", "word_order", "audio", "video"
+        "multiple_choice", "true_false", "right_wrong", "open_answer", "word_order", "audio", "video", "matching"
     ]
     question: str
     # for multiple_choice: options list + correct_index
@@ -166,6 +171,9 @@ class ExerciseIn(BaseModel):
     correct_order: Optional[List[str]] = None
     # shuffled words to display (optional, computed if not given)
     scrambled: Optional[List[str]] = None
+    # for matching: list of left-right pairs
+    matching_pairs: Optional[List[MatchingPair]] = None
+    matching_columns: Optional[int] = None  # 2 or 3
     # media: base64 string OR external URL
     media_base64: Optional[str] = None
     media_url: Optional[str] = None
@@ -350,6 +358,29 @@ def _check_answer(exercise: dict, answer: Any) -> bool:
         if not isinstance(answer, list):
             return False
         return [str(x) for x in answer] == [str(x) for x in correct]
+    if t == "matching":
+        # answer is a list of dicts: [{"left": "...", "right": "..."}, ...]
+        # correct is matching_pairs from exercise
+        if not isinstance(answer, list):
+            return False
+        correct_pairs = exercise.get("matching_pairs") or []
+        if len(answer) != len(correct_pairs):
+            return False
+        # Check if all user pairs match the correct pairs
+        for pair in answer:
+            if not isinstance(pair, dict) or "left" not in pair or "right" not in pair:
+                return False
+            left = str(pair.get("left", "")).strip()
+            right = str(pair.get("right", "")).strip()
+            # Find if this pair exists in correct_pairs
+            found = False
+            for correct in correct_pairs:
+                if str(correct.get("left", "")).strip() == left and str(correct.get("right", "")).strip() == right:
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
     if t in ("audio", "video"):
         # audio/video exercises are informational — require an expected response via multiple_choice semantics
         # If correct_index / correct_bool present, use them; otherwise always correct on acknowledge.
