@@ -407,23 +407,34 @@ function MatchingExercise({ pairs, columns, result, onAnswer, onComplete }: {
   onComplete: (ans: any) => void;
 }) {
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [selectedRight, setSelectedRight] = useState<string | null>(null);
   const [matched, setMatched] = useState<{ [key: string]: string }>({});
   const [wrongFlash, setWrongFlash] = useState<string | null>(null);
 
   const [rightItems] = useState(() => shuffleArr(pairs.map((p) => p.right)));
 
+  // 2-column mode: tap left then right
   const handleLeft = (left: string) => {
     if (result || matched[left]) return;
     setSelectedLeft(left === selectedLeft ? null : left);
   };
 
   const handleRight = (right: string) => {
-    if (result || Object.values(matched).includes(right) || !selectedLeft) return;
+    if (result || Object.values(matched).includes(right)) return;
+    if (columns === 3) {
+      // In 3-col mode: tap right item first OR after selecting left
+      if (!selectedLeft) {
+        setSelectedRight(right === selectedRight ? null : right);
+        return;
+      }
+    }
+    if (!selectedLeft) return;
     const correctRight = pairs.find((p) => p.left === selectedLeft)?.right;
     if (right === correctRight) {
       const newMatched = { ...matched, [selectedLeft]: right };
       setMatched(newMatched);
       setSelectedLeft(null);
+      setSelectedRight(null);
       setWrongFlash(null);
       onAnswer(newMatched);
       if (Object.keys(newMatched).length === pairs.length) {
@@ -431,12 +442,146 @@ function MatchingExercise({ pairs, columns, result, onAnswer, onComplete }: {
       }
     } else {
       setWrongFlash(selectedLeft);
-      setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); }, 700);
+      setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); setSelectedRight(null); }, 700);
+    }
+  };
+
+  // 3-column: middle column shows matched pairs or arrows
+  const handleLeftThreeCol = (left: string) => {
+    if (result || matched[left]) return;
+    const newSelected = left === selectedLeft ? null : left;
+    setSelectedLeft(newSelected);
+    // If a right item was already selected, try to match
+    if (newSelected && selectedRight) {
+      const correctRight = pairs.find((p) => p.left === newSelected)?.right;
+      if (selectedRight === correctRight) {
+        const newMatched = { ...matched, [newSelected]: selectedRight };
+        setMatched(newMatched);
+        setSelectedLeft(null);
+        setSelectedRight(null);
+        setWrongFlash(null);
+        onAnswer(newMatched);
+        if (Object.keys(newMatched).length === pairs.length) {
+          onComplete(newMatched);
+        }
+      } else {
+        setWrongFlash(newSelected);
+        setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); setSelectedRight(null); }, 700);
+      }
+    }
+  };
+
+  const handleRightThreeCol = (right: string) => {
+    if (result || Object.values(matched).includes(right)) return;
+    const newSelected = right === selectedRight ? null : right;
+    setSelectedRight(newSelected);
+    // If a left item was already selected, try to match
+    if (newSelected && selectedLeft) {
+      const correctRight = pairs.find((p) => p.left === selectedLeft)?.right;
+      if (newSelected === correctRight) {
+        const newMatched = { ...matched, [selectedLeft]: newSelected };
+        setMatched(newMatched);
+        setSelectedLeft(null);
+        setSelectedRight(null);
+        setWrongFlash(null);
+        onAnswer(newMatched);
+        if (Object.keys(newMatched).length === pairs.length) {
+          onComplete(newMatched);
+        }
+      } else {
+        setWrongFlash(selectedLeft);
+        setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); setSelectedRight(null); }, 700);
+      }
     }
   };
 
   const leftItems = pairs.map((p) => p.left);
 
+  if (columns === 3) {
+    // 3-column layout: Left | Middle (matched pairs) | Right
+    return (
+      <View style={mStyles.wrap}>
+        <Text style={mStyles.hint}>Tocca un elemento a sinistra e uno a destra per abbinarli</Text>
+        <View style={mStyles.grid3}>
+          {/* Left column */}
+          <View style={mStyles.col}>
+            {leftItems.map((left) => {
+              const isMatched = !!matched[left];
+              const isSelected = selectedLeft === left;
+              const isWrong = wrongFlash === left;
+              return (
+                <TouchableOpacity
+                  key={left}
+                  style={[
+                    mStyles.chip,
+                    mStyles.chipLeft,
+                    isSelected && mStyles.chipSelected,
+                    isMatched && mStyles.chipMatched,
+                    isWrong && mStyles.chipWrong,
+                  ]}
+                  onPress={() => handleLeftThreeCol(left)}
+                  disabled={isMatched || !!result}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[mStyles.chipText, (isSelected || isMatched || isWrong) && { color: "#fff" }]}>
+                    {left}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Middle column: matched results */}
+          <View style={[mStyles.col, mStyles.colMiddle]}>
+            {leftItems.map((left) => {
+              const matchedRight = matched[left];
+              return (
+                <View key={left} style={mStyles.middleCell}>
+                  {matchedRight ? (
+                    <Text style={mStyles.middleArrow}>✓</Text>
+                  ) : (
+                    <Text style={mStyles.middleDash}>→</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Right column */}
+          <View style={mStyles.col}>
+            {rightItems.map((right) => {
+              const isMatched = Object.values(matched).includes(right);
+              const isSelected = selectedRight === right;
+              return (
+                <TouchableOpacity
+                  key={right}
+                  style={[
+                    mStyles.chip,
+                    mStyles.chipRight,
+                    isSelected && mStyles.chipSelected,
+                    isMatched && mStyles.chipMatched,
+                  ]}
+                  onPress={() => handleRightThreeCol(right)}
+                  disabled={isMatched || !!result}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[mStyles.chipText, (isMatched || isSelected) && { color: "#fff" }]}>
+                    {right}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <Text style={mStyles.progress}>
+          {Object.keys(matched).length}/{pairs.length} abbinati
+        </Text>
+      </View>
+    );
+  }
+
+  // Default 2-column layout
   return (
     <View style={mStyles.wrap}>
       <View style={mStyles.grid}>
@@ -503,8 +648,14 @@ function MatchingExercise({ pairs, columns, result, onAnswer, onComplete }: {
 
 const mStyles = StyleSheet.create({
   wrap: { gap: 12 },
+  hint: { textAlign: "center", color: COLORS.textMuted, fontSize: 12, fontStyle: "italic", marginBottom: 4 },
   grid: { flexDirection: "row", gap: 12 },
+  grid3: { flexDirection: "row", gap: 6 },
   col: { flex: 1, gap: 10 },
+  colMiddle: { flex: 0, width: 32, alignItems: "center", justifyContent: "flex-start", gap: 10 },
+  middleCell: { height: 58, alignItems: "center", justifyContent: "center" },
+  middleArrow: { fontSize: 18, color: COLORS.success, fontWeight: "900" },
+  middleDash: { fontSize: 16, color: COLORS.textDisabled },
   chip: {
     paddingHorizontal: 12, paddingVertical: 14, borderRadius: 14,
     borderWidth: 2, borderBottomWidth: 4, alignItems: "center", justifyContent: "center", minHeight: 58,

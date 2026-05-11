@@ -149,10 +149,15 @@ class LoginIn(BaseModel):
     password: str
 
 
+class MatchingPair(BaseModel):
+    left: str
+    right: str
+
+
 class ExerciseIn(BaseModel):
-    # types: multiple_choice, true_false, right_wrong, open_answer, word_order, audio, video
+    # types: multiple_choice, true_false, right_wrong, open_answer, word_order, audio, video, matching
     type: Literal[
-        "multiple_choice", "true_false", "right_wrong", "open_answer", "word_order", "audio", "video"
+        "multiple_choice", "true_false", "right_wrong", "open_answer", "word_order", "audio", "video", "matching"
     ]
     question: str
     # for multiple_choice: options list + correct_index
@@ -172,6 +177,9 @@ class ExerciseIn(BaseModel):
     media_mime: Optional[str] = None
     # optional explanation shown after answer
     explanation: Optional[str] = None
+    # for matching exercises
+    matching_pairs: Optional[List[MatchingPair]] = None
+    matching_columns: Optional[int] = 2
 
 
 class LessonIn(BaseModel):
@@ -254,6 +262,12 @@ def _prepare_lesson(lesson_data: LessonIn) -> dict:
     ex_list = []
     for ex in lesson_data.exercises:
         d = ex.model_dump()
+        # Ensure matching_pairs are plain dicts (not Pydantic objects)
+        if d.get("matching_pairs"):
+            d["matching_pairs"] = [
+                p if isinstance(p, dict) else p.model_dump()
+                for p in d["matching_pairs"]
+            ]
         d["id"] = str(uuid.uuid4())
         ex_list.append(d)
     return {
