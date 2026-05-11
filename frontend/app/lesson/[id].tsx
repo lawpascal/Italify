@@ -345,6 +345,7 @@ export default function LessonScreen() {
 
           {current?.type === "matching" && (
             <MatchingExercise
+              key={current.id}
               pairs={current.matching_pairs || []}
               columns={current.matching_columns || 2}
               result={result}
