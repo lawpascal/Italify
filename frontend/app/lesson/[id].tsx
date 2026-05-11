@@ -421,7 +421,7 @@ function MatchingExercise({ pairs, columns, result, onAnswer, onComplete }: {
 
   const handleRight = (right: string) => {
     if (result || Object.values(matched).includes(right)) return;
-    if (columns === 3) {
+    if (Number(columns) === 3) {
       // In 3-col mode: tap right item first OR after selecting left
       if (!selectedLeft) {
         setSelectedRight(right === selectedRight ? null : right);
@@ -497,7 +497,7 @@ function MatchingExercise({ pairs, columns, result, onAnswer, onComplete }: {
 
   const leftItems = pairs.map((p) => p.left);
 
-  if (columns === 3) {
+  if (Number(columns) === 3) {
     // 3-column layout: Left | Middle (matched pairs) | Right
     return (
       <View style={mStyles.wrap}>
